@@ -27,9 +27,6 @@ namespace EventManger.ViewModels
 			InitCommands();
 			_eventService = new EventService();
 			_eventService.Listen();
-
-			// For testing UI
-			//SelectedEvent = Events[1];
 		}
 
 		private void InitCommands()

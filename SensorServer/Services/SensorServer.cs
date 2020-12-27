@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace SensorServerApi
 {
-    public class SensorServer : ISensorServer
+	public class SensorServer : ISensorServer
     {
         public event OnSensorStatus OnSensorStatusEvent;
         private ConcurrentBag<Sensor> _sensors;
-        private readonly int _sensorCount = 3; //200;
+        private readonly int _sensorCount = 5; //200;
         private int _maxDelayBetweenStatusChange = 2000;
         private readonly int _maxDelayForGetSensor = 200;
         private Random _random = new Random();

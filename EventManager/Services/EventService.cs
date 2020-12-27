@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Data;
 
 namespace EventManger
@@ -13,7 +12,7 @@ namespace EventManger
 	{
 		private ISensorServer _sensorServer;
 		private ICacheService _cacheService;
-		private const int ClearOldEventsInterval = 10000;
+		private const int ClearOldEventsInterval = 5000;
 		private Timer _timer;
 		private static readonly object syncObject = new object();
 
@@ -36,7 +35,7 @@ namespace EventManger
 			_sensorServer.StartServer(Rate.Medium);
 			_sensorServer.OnSensorStatusEvent += _sensorServer_OnSensorStatusEvent;
 
-			StartEventsTimer();
+			//StartEventsTimer();
 		}
 
 		public void StopListening()
@@ -50,86 +49,70 @@ namespace EventManger
 			_timer = new Timer(RemoveOldEvents, null, 0, ClearOldEventsInterval);
 		}
 
-		private async void RemoveOldEvents(object state)
+		private void RemoveOldEvents(object state)
 		{
 			IEnumerable<Event> oldEvents;
 			lock (syncObject)
 			{
 				oldEvents = Events.Where(e => (DateTime.Now - e.TimeRecieved).TotalSeconds > 30).ToList();
-			}
 
-			foreach (var oldEvent in oldEvents)
-			{
-				await _cacheService.RemoveEntity(oldEvent);
-				Events.Remove(oldEvent);
+				foreach (var oldEvent in oldEvents)
+				{
+					_cacheService.RemoveEntity(oldEvent);
+					Events.Remove(oldEvent);
+				}
 			}
 		}
 
 		private void _sensorServer_OnSensorStatusEvent(SensorStatus sensorStatus)
 		{
-			lock (syncObject)
-			{
-				CreateEvent(sensorStatus);
-			}
+			CreateEvent(sensorStatus);
 		}
 
-		private async void CreateEvent(SensorStatus sensorStatus)
+		private void CreateEvent(SensorStatus sensorStatus)
 		{
-			var sensor = await _sensorServer.GetSensorById(sensorStatus.SensorId);
+			var sensor = _sensorServer.GetSensorById(sensorStatus.SensorId).Result;
 			var isAlarming = IsAlarming(sensorStatus, sensor);
-			Event existingEvent;
-			
+
 			lock (syncObject)
 			{
-				existingEvent = Events.FirstOrDefault(e => e.Id == sensor.Id);
-			}
-			
-			Event newEvent = null;
+				var existingEvent = Events.FirstOrDefault(e => e.Id == sensor.Id);
 
-			if (isAlarming)
-			{
-				if (existingEvent == null)
+				if (isAlarming)
 				{
-					// Sensor doesn't have an event so create one
-					newEvent = CreateNewEvent(sensorStatus, sensor);
-					newEvent.Alarms.Add(CreateEventAlarm(newEvent));
-					await _cacheService.AddEntity(newEvent);
-
-					lock (syncObject)
+					if (existingEvent == null)
 					{
+						// Sensor doesn't have an event so create one
+						var newEvent = CreateNewEvent(sensorStatus, sensor);
+						newEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming));
+						_cacheService.AddEntity(newEvent);
+
 						Events.Add(newEvent);
 					}
+					else
+					{
+						// Event exists for this sensor
+						existingEvent.StatusType = sensorStatus.StatusType.ToString();
+						existingEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming));
+						_cacheService.UpdateEntity(existingEvent);
+					}
 				}
-				else
+				else if (existingEvent != null)
 				{
 					// Event exists for this sensor
-					lock (syncObject)
-					{
-						existingEvent.Alarms.Add(CreateEventAlarm(existingEvent));
-					}
-
-					await _cacheService.UpdateEntity(existingEvent);
+					existingEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming));
+					_cacheService.UpdateEntity(existingEvent);
 				}
-			}
-			else if (existingEvent != null)
-			{
-				// Event exists for this sensor
-				lock (syncObject)
-				{
-					existingEvent.Alarms.Add(CreateEventAlarm(existingEvent));
-				}
-
-				await _cacheService.UpdateEntity(existingEvent);
 			}
 		}
 
-		private EventAlarm CreateEventAlarm(Event sensorEvent)
+		private EventAlarm CreateEventAlarm(SensorStatus sensorStatus, bool isAlarming)
 		{
 			return new EventAlarm
 			{
-				TimeRecieved = sensorEvent.TimeRecieved,
-				StatusType = sensorEvent.StatusType,
-				IsAlarming = sensorEvent.IsAlarming
+				TimeRecieved = sensorStatus.TimeStamp,
+				StatusType = sensorStatus.StatusType.ToString(),
+				IsAlarming = isAlarming
 			};
 		}
 

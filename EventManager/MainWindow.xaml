@@ -3,12 +3,26 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:EventManger" 
-        xmlns:views="clr-namespace:EventManger.Views"
+		xmlns:views="clr-namespace:EventManger.Views"
+		xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
         mc:Ignorable="d"
         Title="Event Manager" Width="800" Height="800"
-        Background="#1e273a">
-	<Grid DataContext="{Binding MainWindowVM, Source={StaticResource Locator}}">
+        Background="#1e273a"
+		DataContext="{Binding MainWindowVM, Source={StaticResource Locator}}"
+		>
+	<Window.Resources>
+		<CollectionViewSource Source="{Binding Events}" x:Key="Events">
+			<CollectionViewSource.SortDescriptions>
+				<scm:SortDescription PropertyName="TimeRecieved" Direction="Descending" />
+			</CollectionViewSource.SortDescriptions>
+		</CollectionViewSource>
+		<CollectionViewSource Source="{Binding SelectedEvent.Alarms}" x:Key="Alarms">
+			<CollectionViewSource.SortDescriptions>
+				<scm:SortDescription PropertyName="TimeRecieved" Direction="Descending" />
+			</CollectionViewSource.SortDescriptions>
+		</CollectionViewSource>
+	</Window.Resources>
+	<Grid>
 		<StackPanel>
 			<TextBlock Text="Event Manager" Margin="20" FontSize="18" FontWeight="Bold" Foreground="White"/>
 			<Grid>
@@ -20,7 +34,7 @@
 					<ColumnDefinition Width="*"/>
 				</Grid.ColumnDefinitions>
 
-				<ListBox DataContext="{Binding}" ItemsSource="{Binding Events}" SelectedItem="{Binding SelectedEvent}">
+				<ListBox DataContext="{Binding}" ItemsSource="{Binding Source={StaticResource Events}}" SelectedItem="{Binding SelectedEvent}">
 					<ListBox.Template>
 						<ControlTemplate>
 							<ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -64,7 +78,7 @@
 							</MultiBinding>
 						</TextBlock.Text>
 					</TextBlock>
-					<ItemsControl ItemsSource="{Binding SelectedEvent.Alarms}">
+					<ItemsControl ItemsSource="{Binding Source={StaticResource Alarms}}">
 						<ItemsControl.Template>
 							<ControlTemplate>
 								<ScrollViewer VerticalScrollBarVisibility="Auto">
