@@ -11,11 +11,6 @@
 		DataContext="{Binding MainWindowVM, Source={StaticResource Locator}}"
 		>
 	<Window.Resources>
-		<CollectionViewSource Source="{Binding Events}" x:Key="Events">
-			<CollectionViewSource.SortDescriptions>
-				<scm:SortDescription PropertyName="TimeRecieved" Direction="Descending" />
-			</CollectionViewSource.SortDescriptions>
-		</CollectionViewSource>
 		<CollectionViewSource Source="{Binding SelectedEvent.Alarms}" x:Key="Alarms">
 			<CollectionViewSource.SortDescriptions>
 				<scm:SortDescription PropertyName="TimeRecieved" Direction="Descending" />
@@ -34,7 +29,7 @@
 					<ColumnDefinition Width="*"/>
 				</Grid.ColumnDefinitions>
 
-				<ListBox DataContext="{Binding}" ItemsSource="{Binding Source={StaticResource Events}}" SelectedItem="{Binding SelectedEvent}">
+				<ListBox x:Name="listbox1" DataContext="{Binding}" ItemsSource="{Binding EventsCollection}" SelectedItem="{Binding SelectedEvent}">
 					<ListBox.Template>
 						<ControlTemplate>
 							<ScrollViewer VerticalScrollBarVisibility="Auto">

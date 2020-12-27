@@ -12,16 +12,20 @@ namespace EventManger
 	{
 		private ISensorServer _sensorServer;
 		private ICacheService _cacheService;
-		private const int ClearOldEventsInterval = 5000;
+		private const int ClearOldEventsInterval = 10000;
 		private Timer _timer;
 		private static readonly object syncObject = new object();
+
+		public ICacheService CacheService => _cacheService;
 
 		public ObservableCollection<Event> Events { get; set; }
 
 		public EventService()
 		{
+			// TODO: Use IoC Container!
 			_sensorServer = new SensorServer();
 			_cacheService = new CacheService();
+			
 			Events = new ObservableCollection<Event>();
 			BindingOperations.EnableCollectionSynchronization(Events, syncObject);
 		}
@@ -32,10 +36,10 @@ namespace EventManger
 			//Events = GetEventMocks();
 
 			// Comment out the following two lines for testing event mocks instead of real data from server, only for UI debugging
-			_sensorServer.StartServer(Rate.Easy);
+			_sensorServer.StartServer(Rate.Hardcore);
 			_sensorServer.OnSensorStatusEvent += _sensorServer_OnSensorStatusEvent;
 
-			//StartEventsTimer();
+			StartEventsTimer();
 		}
 
 		public void StopListening()
@@ -94,7 +98,14 @@ namespace EventManger
 						// Event exists for this sensor
 						existingEvent.StatusType = sensorStatus.StatusType.ToString();
 						existingEvent.TimeRecieved = sensorStatus.TimeStamp;
-						App.Current.Dispatcher.Invoke(() => existingEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming)));
+						existingEvent.IsAlarming = isAlarming;
+
+						// Prevents an exception caused by the current running task when closing the application
+						if (App.Current != null)
+						{
+							App.Current.Dispatcher.Invoke(() => existingEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming)));
+						}
+						
 						_cacheService.UpdateEntity(existingEvent);
 					}
 				}
@@ -103,7 +114,14 @@ namespace EventManger
 					// Event exists for this sensor
 					existingEvent.StatusType = sensorStatus.StatusType.ToString();
 					existingEvent.TimeRecieved = sensorStatus.TimeStamp;
-					App.Current.Dispatcher.Invoke(() => existingEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming)));
+					existingEvent.IsAlarming = isAlarming;
+
+					// Prevents an exception caused by the current running task when closing the application
+					if (App.Current != null)
+					{
+						App.Current.Dispatcher.Invoke(() => existingEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming)));
+					}
+
 					_cacheService.UpdateEntity(existingEvent);
 				}
 			}
