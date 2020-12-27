@@ -32,7 +32,7 @@ namespace EventManger
 			//Events = GetEventMocks();
 
 			// Comment out the following two lines for testing event mocks instead of real data from server, only for UI debugging
-			_sensorServer.StartServer(Rate.Medium);
+			_sensorServer.StartServer(Rate.Easy);
 			_sensorServer.OnSensorStatusEvent += _sensorServer_OnSensorStatusEvent;
 
 			//StartEventsTimer();
@@ -93,14 +93,17 @@ namespace EventManger
 					{
 						// Event exists for this sensor
 						existingEvent.StatusType = sensorStatus.StatusType.ToString();
-						existingEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming));
+						existingEvent.TimeRecieved = sensorStatus.TimeStamp;
+						App.Current.Dispatcher.Invoke(() => existingEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming)));
 						_cacheService.UpdateEntity(existingEvent);
 					}
 				}
 				else if (existingEvent != null)
 				{
 					// Event exists for this sensor
-					existingEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming));
+					existingEvent.StatusType = sensorStatus.StatusType.ToString();
+					existingEvent.TimeRecieved = sensorStatus.TimeStamp;
+					App.Current.Dispatcher.Invoke(() => existingEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming)));
 					_cacheService.UpdateEntity(existingEvent);
 				}
 			}
@@ -173,7 +176,7 @@ namespace EventManger
 				new Event {Name = "Sensor 6", InitialStatusType = "On", StatusType = "Connected", TimeRecieved = DateTime.Now, IsAlarming = false }
 			};
 
-			events[0].Alarms = new List<EventAlarm>
+			events[0].Alarms = new ObservableCollection<EventAlarm>
 			{
 				new EventAlarm {StatusType = "Connected", IsAlarming=false, TimeRecieved=DateTime.Now},
 				new EventAlarm {StatusType = "Off", IsAlarming=true, TimeRecieved=DateTime.Now},
@@ -181,13 +184,13 @@ namespace EventManger
 				new EventAlarm {StatusType = "On", IsAlarming=false, TimeRecieved=DateTime.Now}
 			};
 
-			events[1].Alarms = new List<EventAlarm>
+			events[1].Alarms = new ObservableCollection<EventAlarm>
 			{
 				new EventAlarm {StatusType = "Off", IsAlarming=false, TimeRecieved=DateTime.Now},
 				new EventAlarm {StatusType = "On", IsAlarming=true, TimeRecieved=DateTime.Now},
 			};
 
-			events[2].Alarms = new List<EventAlarm>
+			events[2].Alarms = new ObservableCollection<EventAlarm>
 			{
 				new EventAlarm {StatusType = "Disconnected", IsAlarming=true, TimeRecieved=DateTime.Now},
 				new EventAlarm {StatusType = "On", IsAlarming=true, TimeRecieved=DateTime.Now},
@@ -196,7 +199,7 @@ namespace EventManger
 
 			};
 
-			events[3].Alarms = new List<EventAlarm>
+			events[3].Alarms = new ObservableCollection<EventAlarm>
 			{
 				new EventAlarm {StatusType = "On", IsAlarming=false, TimeRecieved=DateTime.Now},
 				new EventAlarm {StatusType = "On", IsAlarming=true, TimeRecieved=DateTime.Now},
