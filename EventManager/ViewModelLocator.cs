@@ -1,0 +1,25 @@
+﻿using CommonServiceLocator;
+using EventManger.ViewModels;
+using GalaSoft.MvvmLight.Ioc;
+
+namespace EventManger
+{
+	/// <summary>
+	/// This class contains static references to all the view models in the
+	/// application and provides an entry point for the bindings.
+	/// </summary>
+	public class ViewModelLocator
+    {
+        /// <summary>
+        /// Initializes a new instance of the ViewModelLocator class.
+        /// </summary>
+        public ViewModelLocator()
+        {
+            ServiceLocator.SetLocatorProvider(() => SimpleIoc.Default);
+            SimpleIoc.Default.Register<MainWindowVM>();
+        }
+
+        public MainWindowVM MainWindowVM => ServiceLocator.Current.GetInstance<MainWindowVM>();
+
+    }
+}
