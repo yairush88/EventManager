@@ -1,4 +1,4 @@
-# EventManager
+# Event Manager
 Moniroting sensor events
 
 Open issues:
