@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SensorServerApi
 {
-    public interface IIdEntity
+	public interface IIdEntity
     {
         Guid Id { get; set; }
     }

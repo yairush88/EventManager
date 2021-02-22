@@ -30,25 +30,25 @@ namespace SensorServerApi
 			}
 		}
 
-		private Task<SensorStatus> _createRandomSensorStatus()
+		private Task<SensorStatus> CreateRandomSensorStatus()
 		{
 			SensorStatus sensorStatus = new SensorStatus();
 			sensorStatus.StatusType = (StatusType)_random.Next(Enum.GetNames(typeof(StatusType)).Length);
-			sensorStatus.IsAlarmStatus = _isAlarmStatus(sensorStatus.StatusType);
+			sensorStatus.IsAlarmStatus = IsAlarmStatus(sensorStatus.StatusType);
 			sensorStatus.SensorId = _sensors.ElementAt(_random.Next(_sensorCount)).Id;
 			return Task.FromResult(sensorStatus);
 		}
 
-		private Task _runCycle()
+		private Task RunCycle()
 		{
 			return Task.Run(async () =>
 			{
-				var status = await _createRandomSensorStatus();
+				var status = await CreateRandomSensorStatus();
 				OnSensorStatusEvent?.BeginInvoke(status, null, null);
 			});
 		}
 
-		private bool _isAlarmStatus(StatusType statusType)
+		private bool IsAlarmStatus(StatusType statusType)
 		{
 			switch (statusType)
 			{
@@ -72,7 +72,7 @@ namespace SensorServerApi
 			{
 				do
 				{
-					await _runCycle();
+					await RunCycle();
 					await Task.Delay(_random.Next(_maxDelayBetweenStatusChange));
 				} while (!_cancellationTokenSource.IsCancellationRequested);
 			});

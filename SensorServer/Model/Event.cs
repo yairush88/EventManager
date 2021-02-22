@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SensorServerApi
 {
-    public class Event : IIdEntity
+	public class Event : IIdEntity
     {
         public Guid Id { get; set; }
         public Guid CreatedSensorId { get; set; }
