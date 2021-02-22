@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SensorServerApi
 {
-    public class CacheService : ICacheService
+	public class CacheService : ICacheService
     {
         private readonly int _maxDelayTime = 5000;
-        private Random _random = new Random();
+        private readonly Random _random = new Random();
 
         public async Task<bool> AddEntity<T>(T ent) where T : class, IIdEntity, new()
         {
