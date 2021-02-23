@@ -43,11 +43,11 @@ namespace EventManger.ViewModels
 			RemoveEventCommand = new RelayCommand<Event>(RemoveEvent);
 		}
 
-		private async void RemoveEvent(Event parameter)
+		private void RemoveEvent(Event @event)
 		{
 			// TODO: Use dependancy injection to inject CacheSerice into view model
-			await _eventService.CacheService.RemoveEntity(SelectedEvent);
-			Events.Remove(SelectedEvent);
+			//await _eventService.CacheService.RemoveEntity(SelectedEvent);
+			Events.Remove(@event);
 		}
 	}
 }

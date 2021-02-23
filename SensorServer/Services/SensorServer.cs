@@ -10,10 +10,10 @@ namespace SensorServerApi
 	{
 		public event OnSensorStatus OnSensorStatusEvent;
 		private ConcurrentBag<Sensor> _sensors;
-		private readonly int _sensorCount = 200;
+		private readonly int _sensorCount = 10;
 		private int _maxDelayBetweenStatusChange = 2000;
 		private readonly int _maxDelayForGetSensor = 200;
-		private Random _random = new Random();
+		private readonly Random _random = new Random();
 		private CancellationTokenSource _cancellationTokenSource;
 
 		public SensorServer()

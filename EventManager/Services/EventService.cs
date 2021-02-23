@@ -1,9 +1,11 @@
 ﻿using SensorServerApi;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Data;
 
 namespace EventManger
@@ -15,6 +17,7 @@ namespace EventManger
 		private const int ClearOldEventsInterval = 10000;
 		private Timer _timer;
 		private static readonly object syncObject = new object();
+		private readonly BlockingCollection<SensorStatus> _sensorStatusQ = new BlockingCollection<SensorStatus>();
 
 		public ICacheService CacheService => _cacheService;
 
@@ -36,9 +39,16 @@ namespace EventManger
 			//Events = GetEventMocks();
 
 			// Comment out the following two lines for testing event mocks instead of real data from server, only for UI debugging
-			_sensorServer.StartServer(Rate.Hardcore);
-			_sensorServer.OnSensorStatusEvent += _sensorServer_OnSensorStatusEvent;
+			var consumer = Task.Run(() =>
+			{
+				foreach (var sensorStatus in _sensorStatusQ.GetConsumingEnumerable())
+				{
+					CreateEvent(sensorStatus);
+				}
+			});
 
+			_sensorServer.StartServer(Rate.Challenging);
+			_sensorServer.OnSensorStatusEvent += _sensorServer_OnSensorStatusEvent;
 			StartEventsTimer();
 		}
 
@@ -58,7 +68,7 @@ namespace EventManger
 			IEnumerable<Event> oldEvents;
 			lock (syncObject)
 			{
-				oldEvents = Events.Where(e => (DateTime.Now - e.TimeRecieved).TotalSeconds > 30).ToList();
+				oldEvents = Events.Where(e => (DateTime.Now - e.TimeRecieved).TotalSeconds > 10).ToList();
 
 				foreach (var oldEvent in oldEvents)
 				{
@@ -70,7 +80,7 @@ namespace EventManger
 
 		private void _sensorServer_OnSensorStatusEvent(SensorStatus sensorStatus)
 		{
-			CreateEvent(sensorStatus);
+			_sensorStatusQ.Add(sensorStatus);
 		}
 
 		private void CreateEvent(SensorStatus sensorStatus)
@@ -78,38 +88,19 @@ namespace EventManger
 			var sensor = _sensorServer.GetSensorById(sensorStatus.SensorId).Result;
 			var isAlarming = IsAlarming(sensorStatus, sensor);
 
-			lock (syncObject)
+			var existingEvent = Events.FirstOrDefault(e => e.Id == sensor.Id);
+
+			if (isAlarming)
 			{
-				var existingEvent = Events.FirstOrDefault(e => e.Id == sensor.Id);
-
-				if (isAlarming)
+				if (existingEvent == null)
 				{
-					if (existingEvent == null)
-					{
-						// Sensor doesn't have an event so create one
-						var newEvent = CreateNewEvent(sensorStatus, sensor);
-						newEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming));
-						_cacheService.AddEntity(newEvent);
-
-						Events.Add(newEvent);
-					}
-					else
-					{
-						// Event exists for this sensor
-						existingEvent.StatusType = sensorStatus.StatusType.ToString();
-						existingEvent.TimeRecieved = sensorStatus.TimeStamp;
-						existingEvent.IsAlarming = isAlarming;
-
-						// Prevents an exception caused by the current running task when closing the application
-						if (App.Current != null)
-						{
-							App.Current.Dispatcher.Invoke(() => existingEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming)));
-						}
-
-						_cacheService.UpdateEntity(existingEvent);
-					}
+					// Sensor doesn't have an event so create one
+					var newEvent = CreateNewEvent(sensorStatus, sensor);
+					newEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming));
+					_cacheService.AddEntity(newEvent);
+					Events.Add(newEvent);
 				}
-				else if (existingEvent != null)
+				else
 				{
 					// Event exists for this sensor
 					existingEvent.StatusType = sensorStatus.StatusType.ToString();
@@ -124,6 +115,21 @@ namespace EventManger
 
 					_cacheService.UpdateEntity(existingEvent);
 				}
+			}
+			else if (existingEvent != null)
+			{
+				// Event exists for this sensor
+				existingEvent.StatusType = sensorStatus.StatusType.ToString();
+				existingEvent.TimeRecieved = sensorStatus.TimeStamp;
+				existingEvent.IsAlarming = isAlarming;
+
+				// Prevents an exception caused by the current running task when closing the application
+				if (App.Current != null)
+				{
+					App.Current.Dispatcher.Invoke(() => existingEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming)));
+				}
+
+				_cacheService.UpdateEntity(existingEvent);
 			}
 		}
 
