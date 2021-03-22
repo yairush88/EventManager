@@ -12,16 +12,19 @@ namespace EventManger
 {
 	public class EventService
 	{
-		private ISensorServer _sensorServer;
-		private ICacheService _cacheService;
+		public delegate void CollectionChangedEventHandler(object sender, EventsChangedEventArgs e);
+		public event CollectionChangedEventHandler EventsCollectionChanged;
+
+		private readonly ISensorServer _sensorServer;
+		private readonly ICacheService _cacheService;
 		private const int ClearOldEventsInterval = 10000;
 		private Timer _timer;
 		private static readonly object syncObject = new object();
 		private readonly BlockingCollection<SensorStatus> _sensorStatusQ = new BlockingCollection<SensorStatus>();
+		private readonly List<Event> _events;
 
 		public ICacheService CacheService => _cacheService;
 
-		public ObservableCollection<Event> Events { get; set; }
 
 		public EventService()
 		{
@@ -29,8 +32,8 @@ namespace EventManger
 			_sensorServer = new SensorServer();
 			_cacheService = new CacheService();
 
-			Events = new ObservableCollection<Event>();
-			BindingOperations.EnableCollectionSynchronization(Events, syncObject);
+			_events = new List<Event>();
+			BindingOperations.EnableCollectionSynchronization(_events, syncObject);
 		}
 
 		public void Listen()
@@ -44,17 +47,18 @@ namespace EventManger
 				foreach (var sensorStatus in _sensorStatusQ.GetConsumingEnumerable())
 				{
 					CreateEvent(sensorStatus);
+					EventsCollectionChanged?.Invoke(this, new EventsChangedEventArgs(_events));
 				}
 			});
 
 			_sensorServer.StartServer(Rate.Challenging);
-			_sensorServer.OnSensorStatusEvent += _sensorServer_OnSensorStatusEvent;
+			_sensorServer.OnSensorStatusEvent += SensorServer_OnSensorStatusEvent;
 			StartEventsTimer();
 		}
 
 		public void StopListening()
 		{
-			_sensorServer.OnSensorStatusEvent -= _sensorServer_OnSensorStatusEvent;
+			_sensorServer.OnSensorStatusEvent -= SensorServer_OnSensorStatusEvent;
 			_timer.Dispose();
 		}
 
@@ -63,22 +67,34 @@ namespace EventManger
 			_timer = new Timer(RemoveOldEvents, null, 0, ClearOldEventsInterval);
 		}
 
+		public void Reset()
+		{
+			_events.Clear();
+			EventsCollectionChanged?.Invoke(this, new EventsChangedEventArgs(_events));
+		}
+
+		public void RemoveEvent(Event @event)
+		{
+			_events.Remove(@event);
+			EventsCollectionChanged?.Invoke(this, new EventsChangedEventArgs(_events));
+		}
+
 		private void RemoveOldEvents(object state)
 		{
 			IEnumerable<Event> oldEvents;
 			lock (syncObject)
 			{
-				oldEvents = Events.Where(e => (DateTime.Now - e.TimeRecieved).TotalSeconds > 10).ToList();
+				oldEvents = _events.Where(e => (DateTime.Now - e.TimeRecieved).TotalSeconds > 10).ToList();
 
 				foreach (var oldEvent in oldEvents)
 				{
 					_cacheService.RemoveEntity(oldEvent);
-					Events.Remove(oldEvent);
+					_events.Remove(oldEvent);
 				}
 			}
 		}
 
-		private void _sensorServer_OnSensorStatusEvent(SensorStatus sensorStatus)
+		private void SensorServer_OnSensorStatusEvent(SensorStatus sensorStatus)
 		{
 			_sensorStatusQ.Add(sensorStatus);
 		}
@@ -88,7 +104,7 @@ namespace EventManger
 			var sensor = _sensorServer.GetSensorById(sensorStatus.SensorId).Result;
 			var isAlarming = IsAlarming(sensorStatus, sensor);
 
-			var existingEvent = Events.FirstOrDefault(e => e.Id == sensor.Id);
+			var existingEvent = _events.FirstOrDefault(e => e.Id == sensor.Id);
 
 			if (isAlarming)
 			{
@@ -98,7 +114,7 @@ namespace EventManger
 					var newEvent = CreateNewEvent(sensorStatus, sensor);
 					newEvent.Alarms.Add(CreateEventAlarm(sensorStatus, isAlarming));
 					_cacheService.AddEntity(newEvent);
-					Events.Add(newEvent);
+					_events.Add(newEvent);
 				}
 				else
 				{

@@ -83,6 +83,7 @@
     </ApplicationDefinition>
     <Compile Include="Enums\ViewModels.cs" />
     <Compile Include="EventQueue.cs" />
+    <Compile Include="Services\EventsChangedEventArgs.cs" />
     <Compile Include="Services\EventService.cs" />
     <Compile Include="Model\Event.cs" />
     <Compile Include="Model\EventAlarm.cs" />

@@ -95,6 +95,7 @@
 				</StackPanel>
 
 			</Grid>
+			<Button Content="Button" Height="40" Command="{Binding ClearEventsCommand}"/>
 		</StackPanel>
 	</Grid>
 </Window>
